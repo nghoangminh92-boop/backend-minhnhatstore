@@ -1,0 +1,18 @@
+{
+  "name": "quan-ly-cua-hang-dien-thoai",
+  "version": "3.0.0",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "migrate:mysql-to-mongodb": "node scripts/migrate-mysql-to-mongodb.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.17.0",
+    "mysql2": "^3.9.0"
+  }
+}

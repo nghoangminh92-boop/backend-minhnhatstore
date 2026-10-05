@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quản lý cửa hàng điện thoại</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://d8j0ntlcm91z4.cloudfront.net">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400&family=JetBrains+Mono:wght@300;400;500&display=swap">
+<style>
+:root{--bg:#eef1f5;--card:#fff;--ink:#0f1b2d;--mute:#5b6778;--line:#dbe1e9;--acc:#cf1724;--acc-t:#fde8ea;--neg:#b4372a;--neg-t:#fbe9e6;--warn:#b7791f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1219;--card:#141c26;--ink:#e7ecf2;--mute:#92a0b2;--line:#263243;--acc:#ff454f;--acc-t:#3a161a;--neg:#f0867a;--neg-t:#3a1e1b;--warn:#e3b05b}}
+:root[data-theme="dark"]{--bg:#0c1219;--card:#141c26;--ink:#e7ecf2;--mute:#92a0b2;--line:#263243;--acc:#ff454f;--acc-t:#3a161a;--neg:#f0867a;--neg-t:#3a1e1b;--warn:#e3b05b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+h1{font-size:20px;margin:0;font-weight:700}
+h2{font-size:16px;margin:0 0 10px;font-weight:600}
+input,select,button{font:inherit;color:inherit}
+input,select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0;width:100%}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 14px}
+button.p{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+:root[data-theme="dark"] button.p{color:#06231e}
+button.x{color:var(--neg);padding:4px 8px;border-color:transparent;background:none}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+nav{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:16px}
+nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:10px 14px;white-space:nowrap;color:var(--mute)}
+nav button.on{color:var(--ink);border-color:var(--acc);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi small{color:var(--mute);display:block}
+.kpi b{font-size:20px;font-weight:700}
+.kpi.main{background:var(--acc);border-color:var(--acc);color:#fff}
+.kpi.main small{color:#d6efe9}
+:root[data-theme="dark"] .kpi.main,:root[data-theme="dark"] .kpi.main small{color:#06231e}
+.pos{color:var(--acc)}.neg{color:var(--neg)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:720px){.grid2{grid-template-columns:1fr}}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end}
+.form label{font-size:13px;color:var(--mute);display:block}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mute);font-weight:500;font-size:13px}
+td.n,th.n{text-align:right}
+.chart{display:flex;align-items:flex-end;gap:10px;height:170px;padding-top:8px}
+.col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.bars{display:flex;align-items:flex-end;gap:3px;height:140px;width:100%;justify-content:center}
+.bars i{display:block;width:44%;max-width:26px;border-radius:4px 4px 0 0;min-height:2px}
+.col span{font-size:12px;color:var(--mute)}
+.rev{background:var(--acc)}.cost{background:var(--neg)}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--mute);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+.row{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:14px}
+.row .t{flex:1;height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.row .t i{display:block;height:100%;background:var(--acc)}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--acc-t);color:var(--acc)}
+.tag.l{background:var(--neg-t);color:var(--neg)}
+.empty{color:var(--mute);padding:14px 0}
+textarea{width:100%;height:120px;font:12px monospace;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px}
+.sp{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#login{position:fixed;inset:0;display:none;padding:0;z-index:10;background:#000;color:#fff}
+#login .auth-hero{position:relative;isolation:isolate;display:grid;grid-template-rows:auto 1fr auto;width:100%;height:100vh;height:100svh;min-height:640px;overflow:hidden;background:#000}
+#login .auth-media{position:absolute;inset:0;z-index:-2;overflow:hidden;background:#000}
+#login .auth-media video{width:100%;height:100%;object-fit:cover;object-position:center}
+#login .auth-scrim{position:absolute;inset:0;z-index:-1;background:linear-gradient(to right,transparent 0%,transparent 38%,rgba(0,0,0,.36) 62%,rgba(0,0,0,.78) 100%),linear-gradient(to bottom,rgba(0,0,0,.5) 0%,transparent 24%,transparent 75%,rgba(0,0,0,.7) 100%)}
+#login .auth-nav{display:flex;align-items:center;justify-content:space-between;gap:32px;padding:clamp(20px,2.4vw,34px) clamp(20px,5vw,100px)}
+#login .auth-brand{display:flex;align-items:center;gap:12px;color:#fff;text-decoration:none;font:400 clamp(16px,1.45vw,24px)/1 "Sora",sans-serif;letter-spacing:.1em}
+#login .auth-brand-mark{display:grid;place-items:center;width:36px;height:36px;border:2px solid #f01924;color:#f01924;font:500 18px/1 "Sora",sans-serif;transform:rotate(45deg)}
+#login .auth-brand-mark span{transform:rotate(-45deg)}
+#login .auth-brand-name small{display:block;margin-top:5px;color:#f01924;font:500 10px/1 "JetBrains Mono",monospace;letter-spacing:.34em}
+#login .auth-nav-note{color:rgba(255,255,255,.62);font:400 clamp(10px,.72vw,13px)/1.5 "JetBrains Mono",monospace;letter-spacing:.15em;text-transform:uppercase}
+#login .auth-body{display:flex;align-items:center;justify-content:flex-end;min-height:0;overflow-y:auto;padding:24px clamp(20px,5vw,100px)}
+#login .auth-panel{width:min(34vw,620px);min-width:380px}
+#login .auth-chip{display:inline-block;border-left:2px solid #f01924;background:rgba(255,255,255,.08);padding:clamp(9px,.8vw,14px) clamp(14px,1.1vw,20px);font:400 clamp(11px,.72vw,14px)/1 "JetBrains Mono",monospace;letter-spacing:.2em;text-transform:uppercase}
+#login .auth-title{margin:clamp(28px,3vw,52px) 0 0;font:200 clamp(54px,6.2vw,118px)/.95 "Sora",sans-serif;letter-spacing:.03em}
+#login .auth-tagline{margin:clamp(14px,1.4vw,24px) 0 0;color:rgba(255,255,255,.62);font:300 clamp(11px,.94vw,17px)/1.5 "JetBrains Mono",monospace;letter-spacing:.14em;text-transform:uppercase}
+#login .auth-form{display:grid;gap:clamp(14px,1.3vw,22px);margin-top:clamp(38px,4.6vw,82px)}
+#login .auth-fields{display:grid;gap:clamp(14px,1.3vw,22px)}
+#login .auth-fields label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#login .auth-fields input{width:100%;min-height:46px;padding:0 2px clamp(12px,1.1vw,18px);border:0;border-bottom:1px solid rgba(255,255,255,.26);border-radius:0;background:transparent;color:#fff;font:300 clamp(16px,.95vw,18px)/1.4 "Sora",sans-serif;transition:border-color .25s ease}
+#login .auth-fields input::placeholder{color:rgba(255,255,255,.62)}
+#login .auth-fields input:focus{outline:none;border-bottom-color:rgba(255,255,255,.85)}
+#login .auth-fields input:focus::placeholder{color:rgba(255,255,255,.42)}
+#login .auth-action{width:100%;min-height:54px;padding:clamp(17px,1.6vw,27px) 20px;border:0;border-radius:0;background:rgba(255,255,255,.05);color:rgba(255,255,255,.72);font:400 clamp(11px,.78vw,14px)/1.3 "JetBrains Mono",monospace;letter-spacing:.22em;text-transform:uppercase;transition:background .25s ease,color .25s ease}
+#login .auth-action:hover{background:rgba(255,255,255,.09);color:#fff}
+#login .auth-action.p{background:#e31320;color:#fff;font-weight:500}
+#login .auth-action.p:hover{background:#ff202d}
+#login .auth-forgot{justify-self:center;margin-top:clamp(10px,1vw,18px);padding:4px 0;border:0;border-radius:0;background:transparent;color:#fff;font:400 clamp(11px,.74vw,14px)/1.5 "JetBrains Mono",monospace;letter-spacing:.16em;text-transform:uppercase}
+#login .auth-forgot:hover{color:rgba(255,255,255,.62);text-decoration:underline;text-underline-offset:4px}
+#login #lerr{min-height:0;margin:0;color:#ff777f;font:400 13px/1.5 "JetBrains Mono",monospace}
+#login #lmsg{margin:0;color:#d8f7e8;font:400 13px/1.5 "JetBrains Mono",monospace}
+#login .auth-footer{border-top:1px solid rgba(255,255,255,.14);padding:clamp(18px,1.7vw,30px) clamp(20px,5vw,100px) max(18px,env(safe-area-inset-bottom));text-align:center;color:rgba(255,255,255,.82);font:400 clamp(12px,.82vw,16px)/1.5 "Sora",sans-serif;letter-spacing:.08em}
+#login .auth-footer a{color:#fff;text-underline-offset:3px;text-decoration-thickness:1px}
+#login .auth-footer a:hover{color:rgba(255,255,255,.62)}
+#login :is(a,button,input):focus-visible{outline:1px solid rgba(255,255,255,.7);outline-offset:3px}
+@media(max-width:1100px){#login .auth-panel{width:min(70vw,520px);min-width:0}}
+@media(max-width:720px){#login .auth-hero{min-height:100svh}#login .auth-scrim{background:linear-gradient(to bottom,rgba(0,0,0,.6) 0%,rgba(0,0,0,.25) 30%,rgba(0,0,0,.78) 100%)}#login .auth-nav{padding-top:max(20px,env(safe-area-inset-top));}#login .auth-nav-note{max-width:130px;text-align:right}#login .auth-body{justify-content:center;padding:24px clamp(20px,7vw,36px)}#login .auth-panel{width:100%}#login .auth-title{font-size:clamp(54px,13vw,82px)}#login .auth-footer{padding-bottom:max(18px,env(safe-area-inset-bottom))}}
+@media(max-width:380px){#login .auth-title{font-size:clamp(44px,15vw,64px)}}
+@media(max-height:640px){#login .auth-hero{min-height:100svh}#login .auth-nav{padding-top:16px;padding-bottom:12px}#login .auth-body{padding-top:12px;padding-bottom:12px}#login .auth-title{font-size:clamp(36px,7vw,64px);margin-top:22px}#login .auth-form{margin-top:24px;gap:12px}#login .auth-fields{gap:12px}#login .auth-action{min-height:44px;padding-top:13px;padding-bottom:13px}#login .auth-footer{padding-top:12px;padding-bottom:12px;font-size:11px}}
+@media(prefers-reduced-motion:reduce){#login .auth-media video{display:none}#login .auth-media{background:#000 url("https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260806_132328_5f9029c8-218f-4489-82b6-29ff2849920e.png") center/cover no-repeat}#login *,#login *::before,#login *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+#st{color:var(--mute);font-size:13px}
+</style>
+</head>
+<body>
+<div id="login"><section class="auth-hero" aria-label="Đăng nhập quản lý cửa hàng">
+<div class="auth-media" aria-hidden="true"><video autoplay muted loop playsinline preload="auto" poster="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260806_132328_5f9029c8-218f-4489-82b6-29ff2849920e.png"><source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260806_133255_956f653f-5d80-4b06-abd5-0f46c98b60fa.mp4" type="video/mp4"></video></div>
+<div class="auth-scrim" aria-hidden="true"></div>
+<header class="auth-nav"><a class="auth-brand" href="#" aria-label="Minh Nhật Store"><span class="auth-brand-mark" aria-hidden="true"><span>M</span></span><span class="auth-brand-name">MINH NHẬT<small>STORE</small></span></a><span class="auth-nav-note">QUẢN LÝ ĐIỆN THOẠI</span></header>
+<main class="auth-body"><div class="auth-panel">
+<span class="auth-chip">[ HỆ THỐNG NỘI BỘ ]</span>
+<h1 id="lt" class="auth-title">Đăng nhập</h1><p id="ls" class="auth-tagline"></p>
+<form id="lf" class="auth-form" onsubmit="return doAuth(event)"><div class="auth-fields">
+<label for="lu">Tên đăng nhập</label><input id="lu" autocomplete="username" placeholder="Tên đăng nhập" required>
+<div id="loginPassword"><label for="lp">Mật khẩu (tối thiểu 8 ký tự)</label><input id="lp" type="password" autocomplete="current-password" placeholder="Mật khẩu" required></div>
+<div id="recoveryFields" style="display:none">
+<label for="recoveryCode">Mã khôi phục Admin</label><input id="recoveryCode" type="password" autocomplete="off" placeholder="Mã khôi phục Admin">
+<label for="newAdminPassword">Mật khẩu mới (8–100 ký tự)</label><input id="newAdminPassword" type="password" autocomplete="new-password" minlength="8" maxlength="100" placeholder="Mật khẩu mới">
+<label for="confirmAdminPassword">Nhập lại mật khẩu mới</label><input id="confirmAdminPassword" type="password" autocomplete="new-password" minlength="8" maxlength="100" placeholder="Nhập lại mật khẩu mới">
+</div></div>
+<div id="lerr" role="alert"></div><div id="lmsg" role="status"></div><button class="auth-action p" id="lb">Đăng nhập</button>
+<button id="forgotToggle" class="auth-forgot" type="button" style="display:none" onclick="toggleRecovery()">Quên mật khẩu Admin?</button></form>
+</div></main>
+<footer class="auth-footer">Minh Nhật Store</footer>
+</section></div>
+<div class="wrap">
+<header>
+  <h1>Quản lý cửa hàng điện thoại</h1>
+  <div class="sp"><label for="mon" style="color:var(--mute)">Tháng</label><input id="mon" type="month" style="width:auto"><button id="rst" title="Xóa dữ liệu và nạp lại dữ liệu mẫu">Nạp lại dữ liệu mẫu</button><button id="clr" title="Xóa toàn bộ dữ liệu để bắt đầu từ đầu">Xóa sạch</button><span id="st"></span><span id="who" style="color:var(--mute)"></span><button id="out">Đăng xuất</button></div>
+</header>
+<nav id="nav"></nav>
+<main id="app"></main>
+</div>
+<script>
+const KEY='phonestore_v1';
+const CATS=['Thuê mặt bằng','Lương nhân viên','Điện nước','Quảng cáo','Bảo hành / Sửa chữa','Vận chuyển','Khác'];
+const PAYS=['Tiền mặt','Chuyển khoản','Trả góp','Thẻ'];
+const TABS=[['dash','Tổng quan'],['sale','Bán hàng'],['inv','Kho điện thoại'],['exp','Chi tiêu'],['rep','Báo cáo'],['accounts','Tài khoản']];
+const $=s=>document.querySelector(s);
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n))+' ₫';
+const sh=n=>{const a=Math.abs(n);return a>=1e9?(n/1e9).toFixed(2)+' tỷ':a>=1e6?(n/1e6).toFixed(1)+' tr':fmt(n)};
+const ymOf=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S,tab='dash',month=ymOf(new Date()),editId=null,invQ='',csv='',currentRole='staff',accounts=[];
+const ROLE_NAMES={owner:'Chủ cửa hàng',manager:'Quản lý',staff:'Nhân viên'};
+const isStaff=()=>currentRole==='staff';
+const canManageAccounts=()=>currentRole==='owner'||currentRole==='manager';
+const canManageData=()=>currentRole==='owner'||currentRole==='manager';
+function visibleTabs(){return TABS.filter(t=>t[0]!=='accounts'||canManageAccounts()).filter(t=>!isStaff()||['sale','inv'].includes(t[0]))}
+
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function seed(){
+  const P=[['Apple','iPhone 16 Pro Max','256GB','Titan sa mạc',29500,33990,4],['Apple','iPhone 16 Pro','128GB','Titan tự nhiên',24800,28990,3],['Apple','iPhone 16','128GB','Xanh mòng két',19200,22490,6],['Apple','iPhone 15','128GB','Đen',15500,18490,5],['Apple','iPhone 14','128GB','Tím',12600,14990,2],['Samsung','Galaxy S25 Ultra','256GB','Xám titan',27200,31990,3],['Samsung','Galaxy S24 FE','128GB','Xanh mint',10900,12990,5],['Samsung','Galaxy A55 5G','128GB','Xanh navy',8300,9990,8],['Samsung','Galaxy Z Flip6','256GB','Bạc',19800,23990,1],['Xiaomi','Xiaomi 14T','256GB','Xanh titan',11700,13990,4],['Xiaomi','Redmi Note 14 Pro','256GB','Đen',6300,7690,10],['OPPO','OPPO Reno12 5G','256GB','Nâu',8600,10490,6],['OPPO','OPPO A3','128GB','Tím',3900,4890,9],['Vivo','Vivo V40','256GB','Tím nhạt',9200,10990,4],['Realme','Realme 12 Pro+','256GB','Be',7900,9690,2],['Google','Pixel 9','128GB','Obsidian',16400,19490,2]];
+  const phones=P.map(p=>({id:uid(),brand:p[0],model:p[1],storage:p[2],color:p[3],cost:p[4]*1000,price:p[5]*1000,stock:p[6]}));
+  const sales=[],exps=[],r=rng(7),now=new Date();
+  for(let m=5;m>=0;m--){
+    const d0=new Date(now.getFullYear(),now.getMonth()-m,1),ym=ymOf(d0);
+    const days=m===0?now.getDate():new Date(d0.getFullYear(),d0.getMonth()+1,0).getDate();
+    const cnt=m===0?Math.max(5,Math.round(days*0.7)):14+Math.floor(r()*9);
+    for(let i=0;i<cnt;i++){
+      const p=phones[Math.floor(r()*phones.length)],q=r()<.1?2:1,dy=1+Math.floor(r()*days);
+      const disc=r()<.4?Math.round(r()*3)*100000:0;
+      sales.push({id:uid(),date:ym+'-'+String(dy).padStart(2,'0'),phoneId:p.id,name:p.brand+' '+p.model+' '+p.storage,qty:q,price:p.price-disc,cost:p.cost,cust:'Khách lẻ',pay:PAYS[Math.floor(r()*4)]});
+    }
+    [['Thuê mặt bằng',25e6,'Tiền thuê tháng'],['Lương nhân viên',30e6,'3 nhân viên'],['Điện nước',2.8e6+Math.round(r()*8)*1e5,'Điện + nước + internet'],['Quảng cáo',4e6+Math.round(r()*8)*5e5,'Facebook / TikTok'],['Bảo hành / Sửa chữa',Math.round(r()*10)*1e5+5e5,'Linh kiện bảo hành'],['Vận chuyển',Math.round(r()*6)*1e5+3e5,'Ship hàng']].forEach(e=>exps.push({id:uid(),date:ym+'-05',cat:e[0],amt:Math.round(e[1]),note:e[2]}));
+  }
+  return{phones,sales,exps};
+}
+async function api(url,method,body){
+  const r=await fetch(url,{method:method||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(r.status===401&&!url.includes('/login')){showLogin();throw new Error('401')}
+  if(!r.ok)throw new Error(j.error||'Lỗi máy chủ');
+  return j;
+}
+let timer=null;
+function save(){
+  $('#st').textContent='Đang lưu…';clearTimeout(timer);
+  timer=setTimeout(async()=>{try{await api('/api/data','PUT',{phones:S.phones,sales:S.sales,exps:S.exps});$('#st').textContent='Đã lưu'}catch(e){$('#st').textContent=e.message==='401'?'':'Lưu lỗi: '+e.message}},400);
+}
+let hasUsers=false;
+let recovering=false;
+function showLogin(){
+  $('#login').style.display='flex';
+  recovering=false;
+  const reg=!hasUsers;
+  $('#lt').textContent=reg?'Tạo tài khoản chủ cửa hàng':'Đăng nhập';
+  $('#ls').textContent=reg?'Chưa có tài khoản nào. Tài khoản đầu tiên sẽ quản lý cửa hàng.':'';
+  $('#lb').textContent=reg?'Tạo tài khoản':'Đăng nhập';
+  $('#lp').autocomplete=reg?'new-password':'current-password';
+  $('#loginPassword').style.display='';
+  $('#lp').required=true;
+  $('#recoveryFields').style.display='none';
+  $('#recoveryCode').required=false;
+  $('#newAdminPassword').required=false;
+  $('#confirmAdminPassword').required=false;
+  $('#forgotToggle').style.display=reg?'none':'';
+  $('#forgotToggle').textContent='Quên mật khẩu Admin?';
+  $('#lerr').textContent='';
+  $('#lmsg').textContent='';
+}
+function toggleRecovery(){
+  recovering=!recovering;
+  $('#lt').textContent=recovering?'Khôi phục mật khẩu Admin':'Đăng nhập';
+  $('#ls').textContent=recovering?'Dùng mã khôi phục Admin đã cấu hình riêng trên máy chủ.':'';
+  $('#lb').textContent=recovering?'Đặt lại mật khẩu':'Đăng nhập';
+  $('#loginPassword').style.display=recovering?'none':'';
+  $('#lp').required=!recovering;
+  $('#recoveryFields').style.display=recovering?'':'none';
+  $('#recoveryCode').required=recovering;
+  $('#newAdminPassword').required=recovering;
+  $('#confirmAdminPassword').required=recovering;
+  $('#forgotToggle').textContent=recovering?'Quay lại đăng nhập':'Quên mật khẩu Admin?';
+  $('#lerr').textContent='';
+  $('#lmsg').textContent='';
+}
+async function doAuth(e){
+  e.preventDefault();$('#lerr').textContent='';$('#lmsg').textContent='';
+  try{
+    if(recovering){
+      const newPassword=$('#newAdminPassword').value;
+      if(newPassword!==$('#confirmAdminPassword').value)throw new Error('Mật khẩu nhập lại không khớp.');
+      await api('/api/forgot-password/admin','POST',{
+        username:$('#lu').value,
+        recoveryCode:$('#recoveryCode').value,
+        newPassword
+      });
+      $('#recoveryCode').value='';
+      $('#newAdminPassword').value='';
+      $('#confirmAdminPassword').value='';
+      $('#lp').value='';
+      toggleRecovery();
+      $('#lmsg').textContent='Đã đặt lại mật khẩu Admin. Hãy đăng nhập bằng mật khẩu mới.';
+      return false;
+    }
+    const j=await api(hasUsers?'/api/login':'/api/register','POST',{username:$('#lu').value,password:$('#lp').value});
+    $('#lp').value='';hasUsers=true;await enter(j.user,j.role);
+  }catch(err){$('#lerr').textContent=err.message}
+  return false;
+}
+async function enter(user,role){
+  const d=await api('/api/data');
+  currentRole=d.role||role||'staff';accountId=d.accountId||'';editId=null;
+  if(!visibleTabs().some(t=>t[0]===tab))tab=isStaff()?'sale':'dash';
+  S=d.empty?seed():{phones:d.phones,sales:d.sales,exps:d.exps};
+  $('#login').style.display='none';$('#who').textContent=user+' · '+(ROLE_NAMES[currentRole]||'Tài khoản');
+  $('#rst').style.display=canManageData()?'':'none';$('#clr').style.display=canManageData()?'':'none';
+  if(d.empty)save();else $('#st').textContent='';
+  render();
+}
+async function boot(){
+  try{
+    const st=await api('/api/status');hasUsers=st.hasUsers;
+    if(st.user)await enter(st.user,st.role);else showLogin();
+  }catch(e){$('#login').style.display='flex';$('#lerr').textContent='Không kết nối được máy chủ.'}
+}
+$('#out').onclick=async()=>{try{await api('/api/logout','POST')}catch(e){}S=null;$('#app').innerHTML='';$('#who').textContent='';showLogin()};
+$('#clr').onclick=()=>{if(canManageData()&&confirm('Xóa toàn bộ điện thoại, đơn bán và chi tiêu?')){S={phones:[],sales:[],exps:[]};save();editId=null;render()}};
+
+const inM=(d,m)=>d.slice(0,7)===m;
+function stats(m){
+  const sl=S.sales.filter(x=>inM(x.date,m)),ex=S.exps.filter(x=>inM(x.date,m));
+  const rev=sl.reduce((a,x)=>a+x.price*x.qty,0),cogs=sl.reduce((a,x)=>a+x.cost*x.qty,0),exp=ex.reduce((a,x)=>a+x.amt,0);
+  return{sl,ex,rev,cogs,exp,gross:rev-cogs,net:rev-cogs-exp,units:sl.reduce((a,x)=>a+x.qty,0)};
+}
+const opts=(arr,sel)=>arr.map(a=>`<option ${a===sel?'selected':''}>${esc(a)}</option>`).join('');
+const pname=p=>`${p.brand} ${p.model} ${p.storage}`;
+
+function dash(){
+  const s=stats(month),[y,mo]=month.split('-').map(Number);
+  const six=[];for(let i=5;i>=0;i--){const d=new Date(y,mo-1-i,1),k=ymOf(d);six.push({k,l:'T'+(d.getMonth()+1),...stats(k)})}
+  const mx=Math.max(1,...six.map(a=>Math.max(a.rev,a.cogs+a.exp)));
+  const byCat=CATS.map(c=>[c,s.ex.filter(e=>e.cat===c).reduce((a,e)=>a+e.amt,0)]).filter(c=>c[1]>0).sort((a,b)=>b[1]-a[1]);
+  const top={};s.sl.forEach(x=>top[x.name]=(top[x.name]||0)+x.qty);
+  const tops=Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const low=S.phones.filter(p=>p.stock<=2).sort((a,b)=>a.stock-b.stock);
+  const margin=s.rev?Math.round(s.net/s.rev*100):0;
+  return`<div class="kpis">
+  <div class="kpi main"><small>Lợi nhuận ròng</small><b>${sh(s.net)}</b><small>Biên ${margin}%</small></div>
+  <div class="kpi"><small>Doanh thu</small><b>${sh(s.rev)}</b></div>
+  <div class="kpi"><small>Giá vốn hàng bán</small><b>${sh(s.cogs)}</b></div>
+  <div class="kpi"><small>Chi phí vận hành</small><b>${sh(s.exp)}</b></div>
+  <div class="kpi"><small>Máy đã bán</small><b>${s.units}</b></div></div>
+  <div class="card"><h2>6 tháng gần nhất</h2><div class="chart">${six.map(a=>`<div class="col"><div class="bars"><i class="rev" style="height:${a.rev/mx*100}%" title="Doanh thu ${fmt(a.rev)}"></i><i class="cost" style="height:${(a.cogs+a.exp)/mx*100}%" title="Tổng chi ${fmt(a.cogs+a.exp)}"></i></div><span>${a.l}</span></div>`).join('')}</div>
+  <div class="legend"><span><i class="rev"></i>Doanh thu</span><span><i class="cost"></i>Giá vốn + chi phí</span></div></div>
+  <div class="grid2"><div class="card"><h2>Chi phí theo khoản</h2>${byCat.length?byCat.map(c=>`<div class="row"><span style="width:130px">${esc(c[0])}</span><div class="t"><i style="width:${c[1]/byCat[0][1]*100}%"></i></div><b>${sh(c[1])}</b></div>`).join(''):'<div class="empty">Chưa có chi tiêu trong tháng này.</div>'}</div>
+  <div class="card"><h2>Bán chạy trong tháng</h2>${tops.length?tops.map(t=>`<div class="row"><span style="flex:1">${esc(t[0])}</span><b>${t[1]} máy</b></div>`).join(''):'<div class="empty">Chưa có đơn bán trong tháng này.</div>'}</div></div>
+  <div class="card"><h2>Cần nhập thêm hàng</h2>${low.length?low.map(p=>`<div class="row"><span style="flex:1">${esc(pname(p))}</span><span class="tag l">${p.stock?'Còn '+p.stock:'Hết hàng'}</span></div>`).join(''):'<div class="empty">Tồn kho đang ổn.</div>'}</div>`;
+}
+function sale(){
+  const s=stats(month),av=S.phones.filter(p=>p.stock>0);
+  return`<div class="card"><h2>Ghi đơn bán</h2>${av.length?`<div class="form">
+  <div style="grid-column:span 2"><label>Điện thoại</label><select id="sp" onchange="pickP()">${av.map(p=>`<option value="${p.id}">${esc(pname(p))} (còn ${p.stock})</option>`).join('')}</select></div>
+  <div><label>Số lượng</label><input id="sq" type="number" min="1" value="1"></div>
+  <div><label>Giá bán (₫)</label><input id="spr" type="number" min="0" value="${av[0].price}"></div>
+  <div><label>Khách hàng</label><input id="sc" placeholder="Khách lẻ"></div>
+  <div><label>Thanh toán</label><select id="spy">${opts(PAYS)}</select></div>
+  <div><label>Ngày</label><input id="sd" type="date" value="${today()}"></div>
+  <button class="p" onclick="addSale()">Lưu đơn bán</button></div>`:'<div class="empty">Kho đã hết hàng. Thêm máy ở tab Kho điện thoại.</div>'}</div>
+  <div class="card"><h2>Đơn bán tháng ${month.slice(5)}/${month.slice(0,4)} (${s.sl.length} đơn)</h2><div class="scroll">${s.sl.length?`<table><tr><th>Ngày</th><th>Điện thoại</th><th class="n">SL</th><th class="n">Giá bán</th><th class="n">Lãi</th><th>Khách</th><th>Thanh toán</th><th></th></tr>${s.sl.sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<tr><td>${x.date.slice(8)}/${x.date.slice(5,7)}</td><td>${esc(x.name)}</td><td class="n">${x.qty}</td><td class="n">${fmt(x.price*x.qty)}</td><td class="n ${x.price>=x.cost?'pos':'neg'}">${fmt((x.price-x.cost)*x.qty)}</td><td>${esc(x.cust)}</td><td>${x.pay}</td><td>${canManageData()?`<button class="x" onclick="delSale('${x.id}')">Xóa</button>`:''}</td></tr>`).join('')}</table>`:'<div class="empty">Chưa có đơn bán nào trong tháng này.</div>'}</div></div>`;
+}
+function inv(){
+  const e=S.phones.find(p=>p.id===editId)||{brand:'',model:'',storage:'',color:'',cost:'',price:'',stock:''};
+  const q=invQ.toLowerCase(),list=S.phones.filter(p=>pname(p).toLowerCase().includes(q)||p.color.toLowerCase().includes(q));
+  const val=S.phones.reduce((a,p)=>a+p.cost*p.stock,0);
+  return`<div class="card"><h2>${editId?'Sửa điện thoại':'Thêm điện thoại'}</h2><div class="form">
+  <div><label>Hãng</label><input id="ib" value="${esc(e.brand)}"></div><div><label>Dòng máy</label><input id="im" value="${esc(e.model)}"></div>
+  <div><label>Dung lượng</label><input id="is" value="${esc(e.storage)}" placeholder="128GB"></div><div><label>Màu</label><input id="ic" value="${esc(e.color)}"></div>
+  <div><label>Giá nhập (₫)</label><input id="ico" type="number" value="${e.cost}"></div><div><label>Giá bán (₫)</label><input id="ip" type="number" value="${e.price}"></div>
+  <div><label>Tồn kho</label><input id="ist" type="number" min="0" value="${e.stock}"></div>
+  <div class="sp"><button class="p" onclick="savePhone()">${editId?'Cập nhật':'Thêm máy'}</button>${editId?'<button onclick="editId=null;render()">Hủy</button>':''}</div></div></div>
+  <div class="card"><div class="sp" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Kho (${S.phones.length} mẫu, vốn tồn ${sh(val)})</h2><input id="iq" placeholder="Tìm theo tên, màu…" value="${esc(invQ)}" style="max-width:220px" oninput="invQ=this.value;render(1)"></div>
+  <div class="scroll">${list.length?`<table><tr><th>Điện thoại</th><th>Màu</th><th class="n">Giá nhập</th><th class="n">Giá bán</th><th class="n">Lãi/máy</th><th class="n">Tồn</th><th></th></tr>${list.map(p=>`<tr><td>${esc(pname(p))}</td><td>${esc(p.color)}</td><td class="n">${fmt(p.cost)}</td><td class="n">${fmt(p.price)}</td><td class="n pos">${fmt(p.price-p.cost)}</td><td class="n"><span class="tag ${p.stock<=2?'l':''}">${p.stock}</span></td><td>${canManageData()?`<button class="x" style="color:var(--acc)" onclick="editId='${p.id}';render();scrollTo(0,0)">Sửa</button><button class="x" onclick="delPhone('${p.id}')">Xóa</button>`:''}</td></tr>`).join('')}</table>`:'<div class="empty">Không tìm thấy máy nào.</div>'}</div></div>`;
+}
+function exp(){
+  const s=stats(month);
+  return`<div class="card"><h2>Ghi khoản chi</h2><div class="form">
+  <div><label>Khoản chi</label><select id="ec">${opts(CATS)}</select></div><div><label>Số tiền (₫)</label><input id="ea" type="number" min="0"></div>
+  <div><label>Ghi chú</label><input id="en"></div><div><label>Ngày</label><input id="ed" type="date" value="${today()}"></div>
+  <button class="p" onclick="addExp()">Lưu khoản chi</button></div></div>
+  <div class="card"><h2>Chi tiêu tháng ${month.slice(5)}/${month.slice(0,4)}: ${fmt(s.exp)}</h2><div class="scroll">${s.ex.length?`<table><tr><th>Ngày</th><th>Khoản chi</th><th>Ghi chú</th><th class="n">Số tiền</th><th></th></tr>${s.ex.sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<tr><td>${x.date.slice(8)}/${x.date.slice(5,7)}</td><td>${esc(x.cat)}</td><td>${esc(x.note)}</td><td class="n">${fmt(x.amt)}</td><td><button class="x" onclick="delExp('${x.id}')">Xóa</button></td></tr>`).join('')}</table>`:'<div class="empty">Chưa có khoản chi nào trong tháng này.</div>'}</div></div>`;
+}
+function rep(){
+  const s=stats(month),[y,mo]=month.split('-').map(Number),rows=[];
+  for(let i=11;i>=0;i--){const d=new Date(y,mo-1-i,1),k=ymOf(d);rows.push([k,stats(k)])}
+  csv='Tháng,Doanh thu,Giá vốn,Chi phí,Lợi nhuận ròng,Số máy\n'+rows.map(r=>[r[0],r[1].rev,r[1].cogs,r[1].exp,r[1].net,r[1].units].join(',')).join('\n');
+  const tot=rows.reduce((a,r)=>a+r[1].net,0);
+  return`<div class="card"><h2>Báo cáo tháng ${month.slice(5)}/${month.slice(0,4)}</h2><div class="scroll"><table>
+  <tr><td>Doanh thu bán máy</td><td class="n">${fmt(s.rev)}</td></tr><tr><td>Trừ giá vốn hàng bán</td><td class="n">${fmt(s.cogs)}</td></tr>
+  <tr><td><b>Lợi nhuận gộp</b></td><td class="n"><b>${fmt(s.gross)}</b></td></tr><tr><td>Trừ chi phí vận hành</td><td class="n">${fmt(s.exp)}</td></tr>
+  <tr><td><b>Lợi nhuận ròng</b></td><td class="n ${s.net>=0?'pos':'neg'}"><b>${fmt(s.net)}</b></td></tr></table></div>
+  <p style="color:var(--mute);font-size:13px;margin:10px 0 0">Tiền nhập máy được tính vào giá vốn khi bán, không tính vào chi phí vận hành.</p></div>
+  <div class="card"><h2>12 tháng gần nhất (lãi ròng cộng dồn ${sh(tot)})</h2><div class="scroll"><table><tr><th>Tháng</th><th class="n">Doanh thu</th><th class="n">Giá vốn</th><th class="n">Chi phí</th><th class="n">Lãi ròng</th><th class="n">Số máy</th></tr>${rows.map(r=>`<tr><td>${r[0].slice(5)}/${r[0].slice(0,4)}</td><td class="n">${fmt(r[1].rev)}</td><td class="n">${fmt(r[1].cogs)}</td><td class="n">${fmt(r[1].exp)}</td><td class="n ${r[1].net>=0?'pos':'neg'}">${fmt(r[1].net)}</td><td class="n">${r[1].units}</td></tr>`).join('')}</table></div>
+  <div style="margin-top:12px"><button onclick="document.getElementById('csvbox').style.display='block'">Xem dạng CSV để sao chép</button><div id="csvbox" style="display:none;margin-top:8px"><textarea readonly onclick="this.select()">${esc(csv)}</textarea></div></div></div>`;
+}
+function accountsPage(){
+  const options=currentRole==='owner'
+    ?'<option value="manager">Quản lý</option><option value="staff">Nhân viên</option>'
+    :'<option value="staff">Nhân viên</option>';
+  const rows=accounts.map(account=>{
+    const isSelf=account.id===accountId;
+    const canEdit=!isSelf&&account.role!=='owner'&&(currentRole==='owner'||account.role==='staff');
+    const roleCell=canEdit&&currentRole==='owner'
+      ?`<select aria-label="Vai trò ${esc(account.username)}" onchange="setAccountRole('${account.id}',this.value)"><option value="manager" ${account.role==='manager'?'selected':''}>Quản lý</option><option value="staff" ${account.role==='staff'?'selected':''}>Nhân viên</option></select>`
+      :esc(ROLE_NAMES[account.role]||account.role);
+    const action=canEdit?`<button onclick="toggleAccount('${account.id}',${!account.active})">${account.active?'Khóa':'Mở khóa'}</button>`:'';
+    const created=account.created?new Date(account.created).toLocaleDateString('vi-VN'):'-';
+    return`<tr><td>${esc(account.username)}${isSelf?' (bạn)':''}</td><td>${roleCell}</td><td>${account.active?'Đang hoạt động':'Đã khóa'}</td><td>${created}</td><td>${action}</td></tr>`;
+  }).join('');
+  return`<div class="card"><h2>Tạo tài khoản</h2><form class="form" onsubmit="return createAccount(event)">
+    <div><label>Tên đăng nhập</label><input id="au" autocomplete="off" required minlength="3" maxlength="30" pattern="[a-zA-Z0-9._-]+"></div>
+    <div><label>Mật khẩu tạm (ít nhất 8 ký tự)</label><input id="ap" type="password" autocomplete="new-password" required minlength="8" maxlength="100"></div>
+    <div><label>Vai trò</label><select id="ar">${options}</select></div>
+    <button class="p">Tạo tài khoản</button></form>
+    <p style="color:var(--mute);font-size:13px;margin-bottom:0">Quản lý có thể tạo/khóa nhân viên. Nhân viên được thêm kho và đơn bán nhưng không sửa hoặc xóa dữ liệu đã lưu.</p></div>
+    <div class="card"><h2>Quản lý tài khoản</h2><div class="scroll">${rows?`<table><tr><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr>${rows}</table>`:'<div class="empty">Chưa có tài khoản nào.</div>'}</div></div>`;
+}
+let accountId='';
+async function loadAccounts(){
+  const result=await api('/api/accounts');
+  accounts=result.accounts;
+}
+async function createAccount(event){
+  event.preventDefault();
+  try{
+    await api('/api/accounts','POST',{username:$('#au').value,password:$('#ap').value,role:$('#ar').value});
+    $('#au').value='';$('#ap').value='';
+    await loadAccounts();render();
+    $('#st').textContent='Đã tạo tài khoản';
+  }catch(error){alert(error.message)}
+  return false;
+}
+async function toggleAccount(id,active){
+  const account=accounts.find(item=>item.id===id);
+  if(!account||!confirm(`${active?'Mở khóa':'Khóa'} tài khoản ${account.username}?`))return;
+  try{await api('/api/accounts/'+id,'PATCH',{active});await loadAccounts();render()}
+  catch(error){alert(error.message)}
+}
+async function setAccountRole(id,role){
+  try{await api('/api/accounts/'+id,'PATCH',{role});await loadAccounts();render()}
+  catch(error){alert(error.message);await loadAccounts();render()}
+}
+const V={dash,sale,inv,exp,rep,accounts:accountsPage};
+function render(keep){
+  if(!S)return;
+  const tabs=visibleTabs();
+  if(!tabs.some(t=>t[0]===tab))tab=tabs[0][0];
+  $('#nav').innerHTML=tabs.map(t=>`<button class="${t[0]===tab?'on':''}" onclick="tab='${t[0]}';render()">${t[1]}</button>`).join('');
+  if(tab==='accounts'){
+    $('#app').innerHTML='<div class="card">Đang tải tài khoản…</div>';
+    loadAccounts().then(()=>{$('#app').innerHTML=V.accounts()}).catch(error=>{$('#app').innerHTML=`<div class="card">${esc(error.message)}</div>`});
+    return;
+  }
+  const f=keep&&document.activeElement&&document.activeElement.id,pos=f&&document.activeElement.selectionStart;
+  $('#app').innerHTML=V[tab]();
+  if(f){const el=document.getElementById(f);if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}}}
+}
+function pickP(){const p=S.phones.find(x=>x.id===$('#sp').value);if(p)$('#spr').value=p.price}
+function addSale(){
+  const p=S.phones.find(x=>x.id===$('#sp').value),q=+$('#sq').value,pr=+$('#spr').value;
+  if(!p||q<1||!(pr>=0))return alert('Kiểm tra lại số lượng và giá bán.');
+  if(q>p.stock)return alert('Kho chỉ còn '+p.stock+' máy '+pname(p)+'.');
+  p.stock-=q;S.sales.push({id:uid(),date:$('#sd').value||today(),phoneId:p.id,name:pname(p),qty:q,price:pr,cost:p.cost,cust:$('#sc').value.trim()||'Khách lẻ',pay:$('#spy').value});
+  save();render();
+}
+function delSale(id){if(!canManageData())return;const x=S.sales.find(a=>a.id===id),p=x&&S.phones.find(a=>a.id===x.phoneId);if(p)p.stock+=x.qty;S.sales=S.sales.filter(a=>a.id!==id);save();render()}
+function savePhone(){
+  if(isStaff()&&editId)return alert('Nhân viên chỉ được thêm máy mới.');
+  const o={brand:$('#ib').value.trim(),model:$('#im').value.trim(),storage:$('#is').value.trim(),color:$('#ic').value.trim(),cost:+$('#ico').value,price:+$('#ip').value,stock:+$('#ist').value||0};
+  if(!o.brand||!o.model||!(o.cost>=0)||!(o.price>=0))return alert('Nhập ít nhất hãng, dòng máy, giá nhập và giá bán.');
+  if(editId)Object.assign(S.phones.find(p=>p.id===editId),o);else S.phones.push({id:uid(),...o});
+  editId=null;save();render();
+}
+function delPhone(id){if(!canManageData())return;S.phones=S.phones.filter(p=>p.id!==id);save();render()}
+function addExp(){
+  if(!canManageData())return;
+  const a=+$('#ea').value;if(!(a>0))return alert('Nhập số tiền lớn hơn 0.');
+  S.exps.push({id:uid(),date:$('#ed').value||today(),cat:$('#ec').value,amt:a,note:$('#en').value.trim()});save();render();
+}
+function delExp(id){if(!canManageData())return;S.exps=S.exps.filter(a=>a.id!==id);save();render()}
+$('#mon').value=month;
+$('#mon').onchange=e=>{if(e.target.value){month=e.target.value;render()}};
+$('#rst').onclick=()=>{if(canManageData()&&S&&confirm('Xóa toàn bộ dữ liệu hiện tại và nạp lại dữ liệu mẫu?')){S=seed();save();editId=null;render()}};
+boot();
+</script>
+</body>
+</html>
