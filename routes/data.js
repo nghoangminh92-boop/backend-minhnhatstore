@@ -92,9 +92,20 @@ function canStaffSave(existing, incoming) {
     return false;
   }
 
+  const returnedAfterSnapshot = new Map();
+
   for (const [id, sale] of previousSales) {
     const submitted = submittedSales.get(id);
-    if (!submitted || !matchesFields(sale, submitted, saleFields)) return false;
+    if (submitted) {
+      if (!matchesFields(sale, submitted, saleFields)) return false;
+      continue;
+    }
+
+    if (!previousPhones.has(sale.phoneId) || sale.qty < 1) return false;
+    returnedAfterSnapshot.set(
+      sale.phoneId,
+      (returnedAfterSnapshot.get(sale.phoneId) || 0) + sale.qty
+    );
   }
 
   for (const [id, expense] of previousExpenses) {
@@ -126,7 +137,9 @@ function canStaffSave(existing, incoming) {
   for (const phone of existing.phones) {
     const submitted = submittedPhones.get(phone.id);
     const expectedStock =
-      integerValue(phone.stock) - (soldAfterSnapshot.get(phone.id) || 0);
+      integerValue(phone.stock) +
+      (returnedAfterSnapshot.get(phone.id) || 0) -
+      (soldAfterSnapshot.get(phone.id) || 0);
 
     if (
       expectedStock < 0 ||
@@ -138,8 +151,7 @@ function canStaffSave(existing, incoming) {
     }
   }
 
-  return incoming.phones.every(phone => phone.stock >= 0) &&
-    existing.sales.length <= incoming.sales.length;
+  return incoming.phones.every(phone => phone.stock >= 0);
 }
 
 router.get('/', requireAuth, asyncHandler(async (req, res) => {
@@ -337,7 +349,7 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
 
     if (!staffWriteAllowed) {
       return res.status(403).json({
-        error: 'Nhân viên chỉ được thêm kho và đơn bán; không được sửa dữ liệu đã lưu.'
+        error: 'Nhân viên chỉ được thêm kho và đơn bán, xóa đơn để hoàn tồn; không được sửa dữ liệu đã lưu.'
       });
     }
   } finally {

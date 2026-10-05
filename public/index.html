@@ -304,7 +304,7 @@ function sale(){
   <div><label>Thanh toán</label><select id="spy">${opts(PAYS)}</select></div>
   <div><label>Ngày</label><input id="sd" type="date" value="${today()}"></div>
   <button class="p" onclick="addSale()">Lưu đơn bán</button></div>`:'<div class="empty">Kho đã hết hàng. Thêm máy ở tab Kho điện thoại.</div>'}</div>
-  <div class="card"><h2>Đơn bán tháng ${month.slice(5)}/${month.slice(0,4)} (${s.sl.length} đơn)</h2><div class="scroll">${s.sl.length?`<table><tr><th>Ngày</th><th>Điện thoại</th><th class="n">SL</th><th class="n">Giá bán</th><th class="n">Lãi</th><th>Khách</th><th>Thanh toán</th><th></th></tr>${s.sl.sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<tr><td>${x.date.slice(8)}/${x.date.slice(5,7)}</td><td>${esc(x.name)}</td><td class="n">${x.qty}</td><td class="n">${fmt(x.price*x.qty)}</td><td class="n ${x.price>=x.cost?'pos':'neg'}">${fmt((x.price-x.cost)*x.qty)}</td><td>${esc(x.cust)}</td><td>${x.pay}</td><td>${canManageData()?`<button class="x" onclick="delSale('${x.id}')">Xóa</button>`:''}</td></tr>`).join('')}</table>`:'<div class="empty">Chưa có đơn bán nào trong tháng này.</div>'}</div></div>`;
+  <div class="card"><h2>Đơn bán tháng ${month.slice(5)}/${month.slice(0,4)} (${s.sl.length} đơn)</h2><div class="scroll">${s.sl.length?`<table><tr><th>Ngày</th><th>Điện thoại</th><th class="n">SL</th><th class="n">Giá bán</th><th class="n">Lãi</th><th>Khách</th><th>Thanh toán</th><th></th></tr>${s.sl.sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<tr><td>${x.date.slice(8)}/${x.date.slice(5,7)}</td><td>${esc(x.name)}</td><td class="n">${x.qty}</td><td class="n">${fmt(x.price*x.qty)}</td><td class="n ${x.price>=x.cost?'pos':'neg'}">${fmt((x.price-x.cost)*x.qty)}</td><td>${esc(x.cust)}</td><td>${x.pay}</td><td>${canManageData()||isStaff()?`<button class="x" onclick="delSale('${x.id}')">Xóa</button>`:''}</td></tr>`).join('')}</table>`:'<div class="empty">Chưa có đơn bán nào trong tháng này.</div>'}</div></div>`;
 }
 function inv(){
   const e=S.phones.find(p=>p.id===editId)||{brand:'',model:'',storage:'',color:'',cost:'',price:'',stock:''};
@@ -359,7 +359,7 @@ function accountsPage(){
     <div><label>Mật khẩu tạm (ít nhất 8 ký tự)</label><input id="ap" type="password" autocomplete="new-password" required minlength="8" maxlength="100"></div>
     <div><label>Vai trò</label><select id="ar">${options}</select></div>
     <button class="p">Tạo tài khoản</button></form>
-    <p style="color:var(--mute);font-size:13px;margin-bottom:0">Quản lý có thể tạo/khóa nhân viên. Nhân viên được thêm kho và đơn bán nhưng không sửa hoặc xóa dữ liệu đã lưu.</p></div>
+    <p style="color:var(--mute);font-size:13px;margin-bottom:0">Quản lý có thể tạo/khóa nhân viên. Nhân viên được thêm kho, thêm đơn bán và xóa đơn để hoàn tồn; không được sửa dữ liệu đã lưu.</p></div>
     <div class="card"><h2>Quản lý tài khoản</h2><div class="scroll">${rows?`<table><tr><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr>${rows}</table>`:'<div class="empty">Chưa có tài khoản nào.</div>'}</div></div>`;
 }
 let accountId='';
@@ -410,7 +410,7 @@ function addSale(){
   p.stock-=q;S.sales.push({id:uid(),date:$('#sd').value||today(),phoneId:p.id,name:pname(p),qty:q,price:pr,cost:p.cost,cust:$('#sc').value.trim()||'Khách lẻ',pay:$('#spy').value});
   save();render();
 }
-function delSale(id){if(!canManageData())return;const x=S.sales.find(a=>a.id===id),p=x&&S.phones.find(a=>a.id===x.phoneId);if(p)p.stock+=x.qty;S.sales=S.sales.filter(a=>a.id!==id);save();render()}
+function delSale(id){if(!canManageData()&&!isStaff())return;const x=S.sales.find(a=>a.id===id);if(!x)return;const p=S.phones.find(a=>a.id===x.phoneId);if(!p)return alert('Không tìm thấy mặt hàng gốc; đơn bán chưa bị xóa.');p.stock=Number(p.stock)+Number(x.qty);S.sales=S.sales.filter(a=>a.id!==id);save();render()}
 function savePhone(){
   if(isStaff()&&editId)return alert('Nhân viên chỉ được thêm máy mới.');
   const o={brand:$('#ib').value.trim(),model:$('#im').value.trim(),storage:$('#is').value.trim(),color:$('#ic').value.trim(),cost:+$('#ico').value,price:+$('#ip').value,stock:+$('#ist').value||0};

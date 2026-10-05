@@ -6,7 +6,7 @@ API và đăng nhập giữ nguyên để frontend hiện tại tiếp tục s�
 
 - **Admin (chủ cửa hàng)**: toàn quyền dữ liệu; tạo tài khoản quản lý/nhân viên; đổi vai trò, khóa/mở khóa, đặt lại mật khẩu hoặc xóa tài khoản quản lý/nhân viên.
 - **Quản lý**: toàn quyền dữ liệu và quản lý tài khoản quản lý/nhân viên; không thể thay đổi tài khoản Admin.
-- **Nhân viên**: xem dữ liệu, thêm điện thoại và đơn bán; không sửa/xóa dữ liệu đã lưu, không quản lý tài khoản hoặc ghi khoản chi.
+- **Nhân viên**: xem dữ liệu, thêm điện thoại và đơn bán; có thể xóa đơn bán để hoàn số lượng về mặt hàng gốc, nhưng không sửa dữ liệu đã lưu, không quản lý tài khoản hoặc ghi khoản chi.
 
 Tài khoản đầu tiên trong database trống có role `admin`. Tài khoản chủ cửa hàng cũ mang role `owner` được tự động nâng cấp thành `admin` khi backend khởi động. Sau đó chỉ admin hoặc quản lý đã đăng nhập mới tạo tài khoản trong tab **Tài khoản**. Backend kiểm tra quyền trên từng yêu cầu. Tài khoản bị khóa mất hiệu lực ngay ở các yêu cầu tiếp theo.
 
