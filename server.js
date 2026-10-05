@@ -5,8 +5,8 @@ const { port } = require('./config');
 async function start() {
   try {
     await connect();
-    const server = app.listen(port, () => {
-      console.log(`Chạy tại http://localhost:${port}`);
+    const server = app.listen(port, '0.0.0.0', () => {
+      console.log(`HTTP server đang lắng nghe trên cổng ${port}`);
     });
 
     const shutdown = signal => {

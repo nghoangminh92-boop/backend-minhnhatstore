@@ -55,7 +55,18 @@ Khởi động:
 
     npm start
 
-Khi thấy `Chạy tại http://localhost:3000`, mở địa chỉ đó. Lần đầu, ứng dụng cho phép tạo tài khoản chủ cửa hàng.
+Khi thấy `HTTP server đang lắng nghe trên cổng 3000`, mở `http://localhost:3000`. Lần đầu, ứng dụng cho phép tạo tài khoản chủ cửa hàng.
+
+## Deploy lên Render
+
+Tạo một **Web Service** từ repository này (không chọn Static Site). Đặt:
+
+- **Build Command:** `npm install`
+- **Start Command:** `npm start`
+
+Trong **Environment** của service, thêm `MONGODB_URI`, `MONGODB_DB` và các secret cần dùng như `JWT_SECRET` hoặc `ADMIN_RECOVERY_CODE`. Không thêm `PORT`: Render tự cấp cổng cho Web Service. Server sẽ lắng nghe trên `0.0.0.0` và phục vụ cả giao diện lẫn API từ cùng một địa chỉ. Sau khi deploy thành công, mở URL gốc của service, không phải URL bắt đầu bằng `/api`.
+
+Nếu service báo live nhưng URL gốc không tải được, kiểm tra log khởi động và quyền truy cập mạng của MongoDB Atlas. Server chỉ bắt đầu lắng nghe sau khi kết nối MongoDB và khởi tạo index thành công.
 
 ## 3. Di trú dữ liệu từ MySQL
 
