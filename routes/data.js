@@ -50,9 +50,11 @@ async function insertInBatches(collection, documents, session) {
   }
 }
 
+const NUMBER_FIELDS = ['cost', 'price', 'stock', 'qty', 'amt', 'materialCost', 'refundAmt'];
+
 function matchesFields(left, right, fields) {
   return fields.every(field => {
-    if (['cost', 'price', 'stock', 'qty', 'amt', 'materialCost'].includes(field)) {
+    if (NUMBER_FIELDS.includes(field)) {
       return integerValue(left[field]) === integerValue(right[field]);
     }
 
@@ -76,22 +78,27 @@ function canStaffSave(existing, incoming) {
   const previousSales = new Map(existing.sales.map(sale => [sale.id, sale]));
   const previousExpenses = new Map(existing.expenses.map(expense => [expense.id, expense]));
   const previousPhones = new Map(existing.phones.map(phone => [phone.id, phone]));
+  const previousReturns = new Map(existing.saleReturns.map(item => [item.id, item]));
   const submittedSales = new Map(incoming.sales.map(sale => [sale.id, sale]));
   const submittedExpenses = new Map(incoming.expenses.map(expense => [expense.id, expense]));
   const submittedPhones = new Map(incoming.phones.map(phone => [phone.id, phone]));
+  const submittedReturns = new Map(incoming.saleReturns.map(item => [item.id, item]));
 
   const saleFields = ['date', 'phoneId', 'name', 'qty', 'price', 'cost', 'cust', 'pay'];
   const expenseFields = ['date', 'cat', 'amt', 'note'];
   const phoneFields = ['brand', 'model', 'storage', 'color', 'cost', 'price'];
+  const returnFields = ['saleId', 'date', 'qty', 'refundAmt'];
 
   if (
     submittedSales.size !== incoming.sales.length ||
     submittedExpenses.size !== incoming.expenses.length ||
-    submittedPhones.size !== incoming.phones.length
+    submittedPhones.size !== incoming.phones.length ||
+    submittedReturns.size !== incoming.saleReturns.length
   ) {
     return false;
   }
 
+  const salesWithReturns = new Set(existing.saleReturns.map(item => item.saleId));
   const returnedAfterSnapshot = new Map();
 
   for (const [id, sale] of previousSales) {
@@ -101,6 +108,8 @@ function canStaffSave(existing, incoming) {
       continue;
     }
 
+    // Không cho nhân viên xóa đơn đã có đổi trả.
+    if (salesWithReturns.has(id)) return false;
     if (!previousPhones.has(sale.phoneId) || sale.qty < 1) return false;
     returnedAfterSnapshot.set(
       sale.phoneId,
@@ -112,8 +121,6 @@ function canStaffSave(existing, incoming) {
     const submitted = submittedExpenses.get(id);
     if (!submitted || !matchesFields(expense, submitted, expenseFields)) return false;
   }
-
-  if (submittedExpenses.size !== previousExpenses.size) return false;
 
   const soldAfterSnapshot = new Map();
 
@@ -134,17 +141,54 @@ function canStaffSave(existing, incoming) {
     );
   }
 
+  // Đổi trả: bản ghi cũ giữ nguyên, bản ghi mới phải hợp lệ.
+  const returnTotals = new Map();
+  const returnedByPhone = new Map();
+
+  for (const [id, saleReturn] of previousReturns) {
+    const submitted = submittedReturns.get(id);
+    if (!submitted || !matchesFields(saleReturn, submitted, returnFields)) return false;
+    returnTotals.set(saleReturn.saleId, (returnTotals.get(saleReturn.saleId) || 0) + saleReturn.qty);
+  }
+
+  for (const [id, saleReturn] of submittedReturns) {
+    if (previousReturns.has(id)) continue;
+    const sale = previousSales.get(saleReturn.saleId);
+    if (
+      !id || !sale || !submittedSales.has(sale.id) ||
+      !saleReturn.date || saleReturn.date < sale.date ||
+      saleReturn.qty < 1 ||
+      saleReturn.refundAmt > sale.price * saleReturn.qty
+    ) {
+      return false;
+    }
+
+    returnTotals.set(sale.id, (returnTotals.get(sale.id) || 0) + saleReturn.qty);
+    returnedByPhone.set(
+      sale.phoneId,
+      (returnedByPhone.get(sale.phoneId) || 0) + saleReturn.qty
+    );
+  }
+
+  for (const [saleId, total] of returnTotals) {
+    const sale = previousSales.get(saleId);
+    if (!sale || total > sale.qty) return false;
+  }
+
   for (const phone of existing.phones) {
     const submitted = submittedPhones.get(phone.id);
     const expectedStock =
       integerValue(phone.stock) +
-      (returnedAfterSnapshot.get(phone.id) || 0) -
+      (returnedAfterSnapshot.get(phone.id) || 0) +
+      (returnedByPhone.get(phone.id) || 0) -
       (soldAfterSnapshot.get(phone.id) || 0);
 
     if (
       expectedStock < 0 ||
       !submitted ||
       !matchesFields(phone, submitted, phoneFields) ||
+      // Ngày nhập kho đã lưu thì nhân viên không được đổi.
+      (phone.stockDate && submitted.stockDate !== phone.stockDate) ||
       submitted.stock !== expectedStock
     ) {
       return false;
@@ -152,6 +196,14 @@ function canStaffSave(existing, incoming) {
   }
 
   return incoming.phones.every(phone => phone.stock >= 0);
+}
+
+function readAll(database, collectionName, userId, session) {
+  const options = session ? { session } : undefined;
+  return database.collection(collectionName)
+    .find({ userId }, options)
+    .project({ _id: 0, userId: 0 })
+    .toArray();
 }
 
 router.get('/', requireAuth, asyncHandler(async (req, res) => {
@@ -164,32 +216,19 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
     sales,
     expenses,
     manualRevenues,
-    repairRevenues
+    repairRevenues,
+    saleReturns
   ] = await Promise.all([
     database.collection('users').findOne(
       { _id: storeId },
       { projection: { inited: 1, dataRevision: 1 } }
     ),
-    database.collection('phones')
-      .find({ userId: storeId })
-      .project({ _id: 0, userId: 0 })
-      .toArray(),
-    database.collection('sales')
-      .find({ userId: storeId })
-      .project({ _id: 0, userId: 0 })
-      .toArray(),
-    database.collection('expenses')
-      .find({ userId: storeId })
-      .project({ _id: 0, userId: 0 })
-      .toArray(),
-    database.collection('manualRevenues')
-      .find({ userId: storeId })
-      .project({ _id: 0, userId: 0 })
-      .toArray(),
-    database.collection('repairRevenues')
-      .find({ userId: storeId })
-      .project({ _id: 0, userId: 0 })
-      .toArray()
+    readAll(database, 'phones', storeId),
+    readAll(database, 'sales', storeId),
+    readAll(database, 'expenses', storeId),
+    readAll(database, 'manualRevenues', storeId),
+    readAll(database, 'repairRevenues', storeId),
+    readAll(database, 'saleReturns', storeId)
   ]);
 
   res.json({
@@ -201,51 +240,47 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
     sales,
     exps: expenses,
     manualRevenues,
-    repairRevenues
+    repairRevenues,
+    saleReturns
   });
 }));
 
 router.put('/', requireAuth, asyncHandler(async (req, res) => {
   const data = req.body;
+  const has = key => Boolean(data) && Object.prototype.hasOwnProperty.call(data, key);
 
   if (
     !data ||
     !Array.isArray(data.phones) ||
     !Array.isArray(data.sales) ||
     !Array.isArray(data.exps) ||
-    !Number.isInteger(data.revision) ||
-    data.revision < 0 ||
-    (
-      Object.prototype.hasOwnProperty.call(data, 'manualRevenues') &&
-      !Array.isArray(data.manualRevenues)
-    ) ||
-    (
-      Object.prototype.hasOwnProperty.call(data, 'repairRevenues') &&
-      !Array.isArray(data.repairRevenues)
-    ) ||
+    (has('revision') && (!Number.isInteger(data.revision) || data.revision < 0)) ||
+    (has('manualRevenues') && !Array.isArray(data.manualRevenues)) ||
+    (has('repairRevenues') && !Array.isArray(data.repairRevenues)) ||
+    (has('saleReturns') && !Array.isArray(data.saleReturns)) ||
     data.phones.length > 5e3 ||
     data.sales.length > 5e4 ||
     data.exps.length > 5e4 ||
     (data.manualRevenues?.length || 0) > 5e4 ||
-    (data.repairRevenues?.length || 0) > 5e4
+    (data.repairRevenues?.length || 0) > 5e4 ||
+    (data.saleReturns?.length || 0) > 5e4
   ) {
     return res.status(400).json({ error: 'Dữ liệu không hợp lệ.' });
   }
 
-  const hasManualRevenues =
-    Object.prototype.hasOwnProperty.call(data, 'manualRevenues');
-  const revenueRows = hasManualRevenues ? data.manualRevenues : [];
-
-  const hasRepairRevenues =
-    Object.prototype.hasOwnProperty.call(data, 'repairRevenues');
-  const repairRows = hasRepairRevenues ? data.repairRevenues : [];
+  // Frontend hiện tại chưa gửi `revision`: bỏ qua kiểm tra xung đột khi thiếu.
+  const clientRevision = has('revision') ? data.revision : null;
+  const revenueRows = has('manualRevenues') ? data.manualRevenues : [];
+  const repairRows = has('repairRevenues') ? data.repairRevenues : [];
+  const returnRows = has('saleReturns') ? data.saleReturns : [];
 
   if (
     !hasUniqueIds(data.phones) ||
     !hasUniqueIds(data.sales) ||
     !hasUniqueIds(data.exps) ||
-    (hasManualRevenues && !hasUniqueIds(revenueRows)) ||
-    (hasRepairRevenues && !hasUniqueIds(repairRows))
+    !hasUniqueIds(revenueRows) ||
+    !hasUniqueIds(repairRows) ||
+    !hasUniqueIds(returnRows)
   ) {
     return res.status(400).json({
       error: 'Mỗi bản ghi phải có mã riêng hợp lệ.'
@@ -261,7 +296,8 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
     color: stringValue(phone.color, 60),
     cost: integerValue(phone.cost),
     price: integerValue(phone.price),
-    stock: integerValue(phone.stock)
+    stock: integerValue(phone.stock),
+    stockDate: stringValue(phone.stockDate, 10)
   }));
 
   const sales = toDocuments(data.sales, storeId, sale => ({
@@ -282,7 +318,7 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
     note: stringValue(expense.note, 300)
   }));
 
-  const manualRevenues = hasManualRevenues
+  const manualRevenues = has('manualRevenues')
     ? toDocuments(revenueRows, storeId, revenue => ({
         date: stringValue(revenue.date, 10),
         amt: integerValue(revenue.amt),
@@ -290,12 +326,21 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
       }))
     : null;
 
-  const repairRevenues = hasRepairRevenues
+  const repairRevenues = has('repairRevenues')
     ? toDocuments(repairRows, storeId, revenue => ({
         date: stringValue(revenue.date, 10),
         amt: integerValue(revenue.amt),
         materialCost: integerValue(revenue.materialCost),
         note: stringValue(revenue.note, 300)
+      }))
+    : null;
+
+  const saleReturns = has('saleReturns')
+    ? toDocuments(returnRows, storeId, saleReturn => ({
+        saleId: stringValue(saleReturn.saleId, 20),
+        date: stringValue(saleReturn.date, 10),
+        qty: integerValue(saleReturn.qty),
+        refundAmt: integerValue(saleReturn.refundAmt)
       }))
     : null;
 
@@ -306,15 +351,20 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     let staffWriteAllowed = true;
     let staleData = false;
-    let nextRevision = data.revision + 1;
+    let nextRevision = 0;
 
     await session.withTransaction(async () => {
+      staffWriteAllowed = true;
+      staleData = false;
+
       const store = await database.collection('users').findOne(
         { _id: userId },
         { session, projection: { dataRevision: 1 } }
       );
       const currentRevision = store?.dataRevision || 0;
-      if (currentRevision !== data.revision) {
+      nextRevision = currentRevision + 1;
+
+      if (clientRevision !== null && currentRevision !== clientRevision) {
         staleData = true;
         nextRevision = currentRevision;
         return;
@@ -322,51 +372,41 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
 
       const revenueCollection = database.collection('manualRevenues');
       const repairRevenueCollection = database.collection('repairRevenues');
+      const returnCollection = database.collection('saleReturns');
 
-      const [existingManualRevenues, existingRepairRevenues] = await Promise.all([
-        revenueCollection
-          .find({ userId }, { session })
-          .project({ _id: 0, userId: 0 })
-          .toArray(),
-        repairRevenueCollection
-          .find({ userId }, { session })
-          .project({ _id: 0, userId: 0 })
-          .toArray()
+      const [
+        existingManualRevenues,
+        existingRepairRevenues,
+        existingSaleReturns
+      ] = await Promise.all([
+        readAll(database, 'manualRevenues', userId, session),
+        readAll(database, 'repairRevenues', userId, session),
+        readAll(database, 'saleReturns', userId, session)
       ]);
 
-      // Keep revenue data when an older client omits either field.
-      const revenuesToSave = manualRevenues || existingManualRevenues;
-      const repairsToSave = repairRevenues || existingRepairRevenues;
+      // Giữ nguyên dữ liệu khi client cũ không gửi các mục này.
+      const revenuesToSave = manualRevenues || existingManualRevenues.map(row => ({ userId, ...row }));
+      const repairsToSave = repairRevenues || existingRepairRevenues.map(row => ({ userId, ...row }));
+      const returnsToSave = saleReturns || existingSaleReturns.map(row => ({ userId, ...row }));
 
       if (req.account.role === 'staff') {
-        const [
-          existingPhones,
-          existingSales,
-          existingExpenses
-        ] = await Promise.all([
-          database.collection('phones')
-            .find({ userId }, { session })
-            .project({ _id: 0, userId: 0 })
-            .toArray(),
-          database.collection('sales')
-            .find({ userId }, { session })
-            .project({ _id: 0, userId: 0 })
-            .toArray(),
-          database.collection('expenses')
-            .find({ userId }, { session })
-            .project({ _id: 0, userId: 0 })
-            .toArray()
+        const [existingPhones, existingSales, existingExpenses] = await Promise.all([
+          readAll(database, 'phones', userId, session),
+          readAll(database, 'sales', userId, session),
+          readAll(database, 'expenses', userId, session)
         ]);
+
+        const stripUser = ({ userId: _userId, ...row }) => row;
 
         const unchangedManualRevenues = sameRecords(
           existingManualRevenues,
-          revenuesToSave.map(({ userId: _userId, ...revenue }) => revenue),
+          revenuesToSave.map(stripUser),
           ['date', 'amt', 'note']
         );
 
         const unchangedRepairRevenues = sameRecords(
           existingRepairRevenues,
-          repairsToSave.map(({ userId: _userId, ...revenue }) => revenue),
+          repairsToSave.map(stripUser),
           ['date', 'amt', 'materialCost', 'note']
         );
 
@@ -376,25 +416,30 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
             {
               phones: existingPhones,
               sales: existingSales,
-              expenses: existingExpenses
+              expenses: existingExpenses,
+              saleReturns: existingSaleReturns
             },
             {
-              phones: phones.map(({ userId: _userId, ...phone }) => phone),
-              sales: sales.map(({ userId: _userId, ...sale }) => sale),
-              expenses: expenses.map(({ userId: _userId, ...expense }) => expense)
+              phones: phones.map(stripUser),
+              sales: sales.map(stripUser),
+              expenses: expenses.map(stripUser),
+              saleReturns: returnsToSave.map(stripUser)
             }
           );
 
         if (!staffWriteAllowed) return;
       }
 
+      // Tài khoản cũ chưa có trường dataRevision thì coi như 0.
+      const revisionFilter = currentRevision === 0 ? { $in: [0, null] } : currentRevision;
       const revisionUpdate = await database.collection('users').updateOne(
-        { _id: userId, dataRevision: currentRevision },
+        { _id: userId, dataRevision: revisionFilter },
         { $set: { inited: true }, $inc: { dataRevision: 1 } },
         { session }
       );
       if (revisionUpdate.matchedCount !== 1) {
         staleData = true;
+        nextRevision = currentRevision;
         return;
       }
 
@@ -403,21 +448,17 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
       await database.collection('expenses').deleteMany({ userId }, { session });
       await revenueCollection.deleteMany({ userId }, { session });
       await repairRevenueCollection.deleteMany({ userId }, { session });
+      await returnCollection.deleteMany({ userId }, { session });
 
       await insertInBatches(database.collection('phones'), phones, session);
       await insertInBatches(database.collection('sales'), sales, session);
       await insertInBatches(database.collection('expenses'), expenses, session);
       await insertInBatches(revenueCollection, revenuesToSave, session);
       await insertInBatches(repairRevenueCollection, repairsToSave, session);
+      await insertInBatches(returnCollection, returnsToSave, session);
 
       await database.collection('users').updateMany(
         { storeId: userId },
-        { $set: { inited: true } },
-        { session }
-      );
-
-      await database.collection('users').updateOne(
-        { _id: userId },
         { $set: { inited: true } },
         { session }
       );
@@ -425,20 +466,20 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
 
     if (!staffWriteAllowed) {
       return res.status(403).json({
-        error: 'Nhân viên chỉ được thêm kho và đơn bán, xóa đơn để hoàn tồn; không được sửa dữ liệu đã lưu.'
+        error: 'Nhân viên chỉ được thêm kho, đơn bán hoặc đổi trả hợp lệ; không được sửa dữ liệu đã lưu.'
       });
     }
     if (staleData) {
       return res.status(409).json({
-        error: 'Dữ liệu vừa được người khác cập nhật. Đang tải dữ liệu mới để đồng bộ.',
+        error: 'Dữ liệu vừa được người khác cập nhật. Hãy tải lại trang để lấy dữ liệu mới.',
         revision: nextRevision
       });
     }
+
+    res.json({ ok: true, revision: nextRevision });
   } finally {
     await session.endSession();
   }
-
-  res.json({ ok: true, revision: nextRevision });
 }));
 
 module.exports = router;
