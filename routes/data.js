@@ -52,7 +52,7 @@ async function insertInBatches(collection, documents, session) {
 
 function matchesFields(left, right, fields) {
   return fields.every(field => {
-    if (['cost', 'price', 'stock', 'qty', 'amt'].includes(field)) {
+    if (['cost', 'price', 'stock', 'qty', 'amt', 'materialCost'].includes(field)) {
       return integerValue(left[field]) === integerValue(right[field]);
     }
 
@@ -158,7 +158,14 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
   const database = getDatabase();
   const storeId = req.account.storeId || req.account._id;
 
-  const [user, phones, sales, expenses, manualRevenues] = await Promise.all([
+  const [
+    user,
+    phones,
+    sales,
+    expenses,
+    manualRevenues,
+    repairRevenues
+  ] = await Promise.all([
     database.collection('users').findOne(
       { _id: storeId },
       { projection: { inited: 1 } }
@@ -178,6 +185,10 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
     database.collection('manualRevenues')
       .find({ userId: storeId })
       .project({ _id: 0, userId: 0 })
+      .toArray(),
+    database.collection('repairRevenues')
+      .find({ userId: storeId })
+      .project({ _id: 0, userId: 0 })
       .toArray()
   ]);
 
@@ -188,7 +199,8 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
     phones,
     sales,
     exps: expenses,
-    manualRevenues
+    manualRevenues,
+    repairRevenues
   });
 }));
 
@@ -204,10 +216,15 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
       Object.prototype.hasOwnProperty.call(data, 'manualRevenues') &&
       !Array.isArray(data.manualRevenues)
     ) ||
+    (
+      Object.prototype.hasOwnProperty.call(data, 'repairRevenues') &&
+      !Array.isArray(data.repairRevenues)
+    ) ||
     data.phones.length > 5e3 ||
     data.sales.length > 5e4 ||
     data.exps.length > 5e4 ||
-    (data.manualRevenues?.length || 0) > 5e4
+    (data.manualRevenues?.length || 0) > 5e4 ||
+    (data.repairRevenues?.length || 0) > 5e4
   ) {
     return res.status(400).json({ error: 'Dữ liệu không hợp lệ.' });
   }
@@ -216,11 +233,16 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
     Object.prototype.hasOwnProperty.call(data, 'manualRevenues');
   const revenueRows = hasManualRevenues ? data.manualRevenues : [];
 
+  const hasRepairRevenues =
+    Object.prototype.hasOwnProperty.call(data, 'repairRevenues');
+  const repairRows = hasRepairRevenues ? data.repairRevenues : [];
+
   if (
     !hasUniqueIds(data.phones) ||
     !hasUniqueIds(data.sales) ||
     !hasUniqueIds(data.exps) ||
-    (hasManualRevenues && !hasUniqueIds(revenueRows))
+    (hasManualRevenues && !hasUniqueIds(revenueRows)) ||
+    (hasRepairRevenues && !hasUniqueIds(repairRows))
   ) {
     return res.status(400).json({
       error: 'Mỗi bản ghi phải có mã riêng hợp lệ.'
@@ -265,6 +287,15 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
       }))
     : null;
 
+  const repairRevenues = hasRepairRevenues
+    ? toDocuments(repairRows, storeId, revenue => ({
+        date: stringValue(revenue.date, 10),
+        amt: integerValue(revenue.amt),
+        materialCost: integerValue(revenue.materialCost),
+        note: stringValue(revenue.note, 300)
+      }))
+    : null;
+
   const database = getDatabase();
   const userId = storeId;
   const session = getClient().startSession();
@@ -274,13 +305,22 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
 
     await session.withTransaction(async () => {
       const revenueCollection = database.collection('manualRevenues');
-      const existingManualRevenues = await revenueCollection
-        .find({ userId }, { session })
-        .project({ _id: 0, userId: 0 })
-        .toArray();
+      const repairRevenueCollection = database.collection('repairRevenues');
 
-      // Giữ dữ liệu doanh thu nếu request đến từ client cũ không gửi trường này.
+      const [existingManualRevenues, existingRepairRevenues] = await Promise.all([
+        revenueCollection
+          .find({ userId }, { session })
+          .project({ _id: 0, userId: 0 })
+          .toArray(),
+        repairRevenueCollection
+          .find({ userId }, { session })
+          .project({ _id: 0, userId: 0 })
+          .toArray()
+      ]);
+
+      // Keep revenue data when an older client omits either field.
       const revenuesToSave = manualRevenues || existingManualRevenues;
+      const repairsToSave = repairRevenues || existingRepairRevenues;
 
       if (req.account.role === 'staff') {
         const [
@@ -308,18 +348,26 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
           ['date', 'amt', 'note']
         );
 
-        staffWriteAllowed = unchangedManualRevenues && canStaffSave(
-          {
-            phones: existingPhones,
-            sales: existingSales,
-            expenses: existingExpenses
-          },
-          {
-            phones: phones.map(({ userId: _userId, ...phone }) => phone),
-            sales: sales.map(({ userId: _userId, ...sale }) => sale),
-            expenses: expenses.map(({ userId: _userId, ...expense }) => expense)
-          }
+        const unchangedRepairRevenues = sameRecords(
+          existingRepairRevenues,
+          repairsToSave.map(({ userId: _userId, ...revenue }) => revenue),
+          ['date', 'amt', 'materialCost', 'note']
         );
+
+        staffWriteAllowed = unchangedManualRevenues &&
+          unchangedRepairRevenues &&
+          canStaffSave(
+            {
+              phones: existingPhones,
+              sales: existingSales,
+              expenses: existingExpenses
+            },
+            {
+              phones: phones.map(({ userId: _userId, ...phone }) => phone),
+              sales: sales.map(({ userId: _userId, ...sale }) => sale),
+              expenses: expenses.map(({ userId: _userId, ...expense }) => expense)
+            }
+          );
 
         if (!staffWriteAllowed) return;
       }
@@ -328,11 +376,13 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
       await database.collection('sales').deleteMany({ userId }, { session });
       await database.collection('expenses').deleteMany({ userId }, { session });
       await revenueCollection.deleteMany({ userId }, { session });
+      await repairRevenueCollection.deleteMany({ userId }, { session });
 
       await insertInBatches(database.collection('phones'), phones, session);
       await insertInBatches(database.collection('sales'), sales, session);
       await insertInBatches(database.collection('expenses'), expenses, session);
       await insertInBatches(revenueCollection, revenuesToSave, session);
+      await insertInBatches(repairRevenueCollection, repairsToSave, session);
 
       await database.collection('users').updateMany(
         { storeId: userId },

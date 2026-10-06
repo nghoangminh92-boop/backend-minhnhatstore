@@ -154,6 +154,22 @@ const isStaff=()=>currentRole==='staff';
 const canManageAccounts=()=>currentRole==='owner'||currentRole==='manager';
 const canManageData=()=>currentRole==='owner'||currentRole==='manager';
 function visibleTabs(){return TABS.filter(t=>t[0]!=='accounts'||canManageAccounts()).filter(t=>!isStaff()||['sale','inv'].includes(t[0]))}
+let syncTimer=null,syncing=false;
+function stopSync(){clearInterval(syncTimer);syncTimer=null}
+function rowsKey(rows){return JSON.stringify(rows.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id))))}
+async function syncData(){
+  if(!S||syncing||timer!==null||saving||saveQueued||document.querySelector('#app input:focus,#app textarea:focus,#app select:focus'))return;
+  syncing=true;
+  try{
+    const d=await api('/api/data');
+    const changed=rowsKey(S.phones)!==rowsKey(d.phones)||rowsKey(S.sales)!==rowsKey(d.sales)||rowsKey(S.exps)!==rowsKey(d.exps);
+    if(changed){S={phones:d.phones,sales:d.sales,exps:d.exps};render()}
+  }catch(error){
+    if(error.message==='401')stopSync();
+    else $('#st').textContent='Đồng bộ lỗi: '+error.message;
+  }finally{syncing=false}
+}
+function startSync(){stopSync();syncTimer=setInterval(syncData,3000)}
 
 function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function seed(){
@@ -181,13 +197,22 @@ async function api(url,method,body){
   return j;
 }
 let timer=null;
+let saving=false,saveQueued=false;
 function save(){
-  $('#st').textContent='Đang lưu…';clearTimeout(timer);
-  timer=setTimeout(async()=>{try{await api('/api/data','PUT',{phones:S.phones,sales:S.sales,exps:S.exps});$('#st').textContent='Đã lưu'}catch(e){$('#st').textContent=e.message==='401'?'':'Lưu lỗi: '+e.message}},400);
+  $('#st').textContent='Đang lưu…';clearTimeout(timer);saveQueued=true;
+  timer=setTimeout(async()=>{
+    timer=null;saving=true;
+    try{
+      await api('/api/data','PUT',{phones:S.phones,sales:S.sales,exps:S.exps});
+      if(timer===null){saveQueued=false;$('#st').textContent='Đã lưu'}
+    }catch(e){$('#st').textContent=e.message==='401'?'':'Lưu lỗi: '+e.message}
+    finally{saving=false}
+  },400);
 }
 let hasUsers=false;
 let recovering=false;
 function showLogin(){
+  stopSync();
   $('#login').style.display='flex';
   recovering=false;
   const reg=!hasUsers;
@@ -254,6 +279,7 @@ async function enter(user,role){
   $('#rst').style.display=canManageData()?'':'none';$('#clr').style.display=canManageData()?'':'none';
   if(d.empty)save();else $('#st').textContent='';
   render();
+  startSync();
 }
 async function boot(){
   try{
@@ -261,7 +287,7 @@ async function boot(){
     if(st.user)await enter(st.user,st.role);else showLogin();
   }catch(e){$('#login').style.display='flex';$('#lerr').textContent='Không kết nối được máy chủ.'}
 }
-$('#out').onclick=async()=>{try{await api('/api/logout','POST')}catch(e){}S=null;$('#app').innerHTML='';$('#who').textContent='';showLogin()};
+$('#out').onclick=async()=>{stopSync();try{await api('/api/logout','POST')}catch(e){}S=null;$('#app').innerHTML='';$('#who').textContent='';showLogin()};
 $('#clr').onclick=()=>{if(canManageData()&&confirm('Xóa toàn bộ điện thoại, đơn bán và chi tiêu?')){S={phones:[],sales:[],exps:[]};save();editId=null;render()}};
 
 const inM=(d,m)=>d.slice(0,7)===m;
