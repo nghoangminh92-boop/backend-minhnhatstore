@@ -168,7 +168,7 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
   ] = await Promise.all([
     database.collection('users').findOne(
       { _id: storeId },
-      { projection: { inited: 1 } }
+      { projection: { inited: 1, dataRevision: 1 } }
     ),
     database.collection('phones')
       .find({ userId: storeId })
@@ -194,6 +194,7 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
 
   res.json({
     empty: !user?.inited,
+    revision: user?.dataRevision || 0,
     role: req.account.role,
     accountId: req.account._id.toString(),
     phones,
@@ -212,6 +213,8 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
     !Array.isArray(data.phones) ||
     !Array.isArray(data.sales) ||
     !Array.isArray(data.exps) ||
+    !Number.isInteger(data.revision) ||
+    data.revision < 0 ||
     (
       Object.prototype.hasOwnProperty.call(data, 'manualRevenues') &&
       !Array.isArray(data.manualRevenues)
@@ -302,8 +305,21 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
 
   try {
     let staffWriteAllowed = true;
+    let staleData = false;
+    let nextRevision = data.revision + 1;
 
     await session.withTransaction(async () => {
+      const store = await database.collection('users').findOne(
+        { _id: userId },
+        { session, projection: { dataRevision: 1 } }
+      );
+      const currentRevision = store?.dataRevision || 0;
+      if (currentRevision !== data.revision) {
+        staleData = true;
+        nextRevision = currentRevision;
+        return;
+      }
+
       const revenueCollection = database.collection('manualRevenues');
       const repairRevenueCollection = database.collection('repairRevenues');
 
@@ -372,6 +388,16 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
         if (!staffWriteAllowed) return;
       }
 
+      const revisionUpdate = await database.collection('users').updateOne(
+        { _id: userId, dataRevision: currentRevision },
+        { $set: { inited: true }, $inc: { dataRevision: 1 } },
+        { session }
+      );
+      if (revisionUpdate.matchedCount !== 1) {
+        staleData = true;
+        return;
+      }
+
       await database.collection('phones').deleteMany({ userId }, { session });
       await database.collection('sales').deleteMany({ userId }, { session });
       await database.collection('expenses').deleteMany({ userId }, { session });
@@ -402,11 +428,17 @@ router.put('/', requireAuth, asyncHandler(async (req, res) => {
         error: 'Nhân viên chỉ được thêm kho và đơn bán, xóa đơn để hoàn tồn; không được sửa dữ liệu đã lưu.'
       });
     }
+    if (staleData) {
+      return res.status(409).json({
+        error: 'Dữ liệu vừa được người khác cập nhật. Đang tải dữ liệu mới để đồng bộ.',
+        revision: nextRevision
+      });
+    }
   } finally {
     await session.endSession();
   }
 
-  res.json({ ok: true });
+  res.json({ ok: true, revision: nextRevision });
 }));
 
 module.exports = router;
